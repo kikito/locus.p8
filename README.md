@@ -19,10 +19,10 @@ This is useful in several scenarios:
 
 # API
 
-## Creation of a locus instance
+## Creating a locus instance
 
 ``` lua
-local loc = locus(size)
+local loc=locus([size])
 ```
 Parameters:
 - `size`: An optional parameter that specifies the dimensions (with and height) of the squared cells inside this locus instance. Defaults to `32` when not specified.
@@ -97,7 +97,7 @@ local res=loc.query(x,y,w,h,[filter])
 Parameters:
 - `x,y`: The `left` and`top` coordinates of the axis-aligned rectangle being queried
 - `w,h`: The `width` and `height` of the axis-aligned rectangle being queried
-- `filter`: An optional function which can be used to "exclude" or include object from the result. `filter` is a function which takes an object as parameter and returns "truthy" when the object should be included in the result, or "falsy" to not include it. By default, `locus` will include all objects it encounters on the specified rectangle
+- `filter`: An optional function which can be used to "exclude" or include object from the result. `filter` is a function which takes an object as parameter and returns "truthy" when the object should be included in the result, or "falsy" to not include it. If no filter is specified `locus` will include all objects it encounters on the rectangle
 
 Return values:
 - res: A table of the form `{[obj1]=true, [obj2]=true}` containing all the objects whose boxes intersecting with the specified axis-aligned bounding box.
@@ -183,7 +183,6 @@ While the other methods are "symmetric" with regards to pool usage (`add` takes 
 ## Why does `query` return a table? Wouldn't it be more efficient to use a callback, or an iterator?
 
 Objects in locus, even small ones, can touch multiple cells as they move. As a result, while querying the cells, we might encounter the same object more than once. The only way to detect this by introducing a `visited` table, which contains the already visited objects. A callback or an iterator would need to be built *on top* of that `visited` table in order to avoid calling the same callback multiple times for the same object. I think this will be undesirable more often than not. So `query` just returns the `visited` table, which is used internally *also* to avoid duplicated objects in the results.
-
 
 ## When should I *not* use locus?
 
@@ -292,11 +291,15 @@ Notes:
 
 ## Can I use locus in picotron?
 
-Locus should be compatible with picotron, but some sacrifices needed to be made in order to preserve the token count contained for pico-8. In particular, the `each` internal function sacrifices (a small amount of) speed in order to preserve tokens. In an unconstrained environment like picotron, it might make more sense to expand `each` into 4 functions, costing more tokens but also being slightly faster.
+Locus should be compatible with picotron, but some sacrifices needed to be made in order to preserve the token count contained for pico-8. In particular, the `each` internal function sacrifices (a small amount of) speed in order to reduce token usage. In an unconstrained environment like picotron, it might make more sense to expand `each` into 4 functions, costing more tokens but also being slightly faster.
 
 ## Can locus have rectangular (non-squared) grid cells?
 
 No, only squared grid cells are supported. It would be very easy to add support for rectangular cells, but it would cost some tokens that I didn't want to spend. Feel free to fork and add support for that if you need to.
+
+## Why not use the colon syntax? (`loc:add` instead of `loc.add`)
+
+It's a token-saving decision. Coding in a "self-less" way where the instance variables are inside a function closure instead of in a table that gets passed everywhere saves some tokens.
  
 ## I am having trouble with locus, it does not seem to work. How can I debug it?
 
