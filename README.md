@@ -17,6 +17,10 @@ This is useful in several scenarios:
 * This is useful for collision detection; instead of checking n-to-n interactions, locus can be used to restrict the amount of objects to be checked, sometimes dramatically reducing the number of checks.
 * Given that the query area is rectangular, locus can be used to optimize the draw stage, by "only rendering objects that intersect with the screen"
 
+
+[![locus demo](https://www.lexaloffle.com/bbs/cposts/te/test_locus-1.p8.png)](https://www.lexaloffle.com/bbs/cart_info.php?cid=test_locus-1)
+
+
 # API
 
 ## Creating a locus instance

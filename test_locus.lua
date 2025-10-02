@@ -66,7 +66,7 @@ function draw_locus(loc)
         cell=row[cx]
         if cell then
           local x,y=(cx-1)*size,(cy-1)*size
-          rect(x,y,x+size,y+size)
+          rrect(x,y,size,size)
           local count=0
           for _ in pairs(cell) do count+=1 end
           print(count,x+2,y+2)
@@ -78,7 +78,7 @@ function draw_locus(loc)
   -- draw the boxes containing each object
   local objcount=0
   for _,box in pairs(loc._boxes) do
-    rect(box[1],box[2],box[1]+box[3],box[2]+box[4])
+    rrect(box[1],box[2],box[3],box[4])
     objcount+=1
   end
   -- print how many objects are in locus
@@ -101,12 +101,12 @@ function _draw()
 
   -- draw the viewport
   color(10)
-  rect(vp.x,vp.y,vp.x+vp.w,vp.y+vp.h)
+  rrect(vp.x,vp.y,vp.w,vp.h)
 
   -- draw he objects that are visible through the viewport with rectfill+color
   clip(vp.x,vp.y,vp.w,vp.h)
   for obj in pairs(loc.query(vp.x,vp.y,vp.w,vp.h)) do
-   rectfill(obj.x,obj.y,obj.x+obj.w,obj.y+obj.h,obj.col)
+   rrectfill(obj.x,obj.y,obj.w,obj.h,0,obj.col)
   end
   clip()
 end
