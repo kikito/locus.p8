@@ -82,12 +82,6 @@ function draw_locus(loc)
   -- print how many objects are in locus
   circ(7,120,5)
   print(objcount, 5,118)
-
-  -- print the pool size
-  local poolsize=0
-  for _ in pairs(loc._pool) do poolsize+=1 end
-  circ(120,120,5)
-  print(poolsize, 118,118)
 end
 
 function _draw()
