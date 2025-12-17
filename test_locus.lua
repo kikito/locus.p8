@@ -35,7 +35,7 @@ function _update()
   -- move all the objects in locus
   -- we use a bigger box than just the screen so that we also update the objects that
   -- are outside of the visible screen
-  for obj in pairs(loc.query(-128,-128,256,256)) do
+  for obj in loc.query(-128,-128,256,256) do
     obj.x+= sin(obj.av*t)*obj.r
     obj.y+= cos(obj.av*t)*obj.r
     loc.update(obj,obj.x,obj.y)
@@ -104,7 +104,7 @@ function _draw()
 
   -- draw he objects that are visible through the viewport with rectfill+color
   clip(vp.x,vp.y,vp.w,vp.h)
-  for obj in pairs(loc.query(vp.x,vp.y,vp.w,vp.h)) do
+  for obj in loc.query(vp.x,vp.y,vp.w,vp.h) do
    rrectfill(obj.x,obj.y,obj.w,obj.h,0,obj.col)
   end
   clip()

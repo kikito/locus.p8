@@ -15,7 +15,25 @@ _ENV.locus = function(size)
     return (x\size)+1, (y\size)+1
   end
 
-  local function each(op,p1,l,t,r,b,filter)
+  local function query_iter(l,t,r,b)
+    for cy=t,b do
+      for cx=l,r do
+        local cell=cells[cx|(cy>>>16)]
+        if cell then
+          for obj in pairs(cell) do
+            yield(obj)
+          end
+        end
+      end
+    end
+  end
+
+  local function query_next(co)
+    local _,obj=coresume(co)
+    return obj
+  end
+
+  local function each(op,p1,l,t,r,b)
     local cell,idx
     for cy=t,b do
       for cx=l,r do
@@ -31,12 +49,6 @@ _ENV.locus = function(size)
             cell[p1]=nil
           elseif op=="free" and not next(cell) then
             cells[idx],pool[cell]=nil,true
-          elseif op=="query" then
-            for obj in pairs(cell) do
-              if not p1[obj] and (not filter or filter(obj)) then
-                p1[obj]=true
-              end
-            end
           end
         end
       end
@@ -74,12 +86,11 @@ _ENV.locus = function(size)
       px[obj],py[obj]=x,y
     end,
 
-    query=function(x,y,w,h,filter)
-      local res=frompool()
+    query=function(x,y,w,h)
       local l,t=p2c(x,y)
       local r,b=p2c(x+w,y+h)
-      each("query",res,l-1,t-1,r+1,b+1,filter)
-      return res
+      local co=cocreate(function() query_iter(l-1,t-1,r+1,b+1) end)
+      return query_next,co
     end,
   }
 end
