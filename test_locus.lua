@@ -59,20 +59,17 @@ function draw_locus(loc)
   -- calculate grid bounds manually
   local cl,ct=1,1
   local cr,cb=(128\size)+1,(128\size)+1
-  local row,cell
+  local cell
   -- draw the cells
   for cy=ct,cb do
-    row=loc._rows[cy]
-    if row then
-      for cx=cl,cr do
-        cell=row[cx]
-        if cell then
-          local x,y=(cx-1)*size,(cy-1)*size
-          rrect(x,y,size,size)
-          local count=0
-          for _ in pairs(cell) do count+=1 end
-          print(count,x+2,y+2)
-        end
+    for cx=cl,cr do
+      cell=loc._cells[cx|(cy>>>16)]
+      if cell then
+        local x,y=(cx-1)*size,(cy-1)*size
+        rrect(x,y,size,size)
+        local count=0
+        for _ in pairs(cell) do count+=1 end
+        print(count,x+2,y+2)
       end
     end
   end

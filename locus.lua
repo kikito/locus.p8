@@ -1,6 +1,6 @@
 _ENV.locus = function(size)
   size=size or 32
-  local rows,px,py,pool={},{},{},{}
+  local cells,px,py,pool={},{},{},{}
 
   local function frompool()
     local tbl=next(pool)
@@ -16,43 +16,35 @@ _ENV.locus = function(size)
   end
 
   local function each(op,p1,l,t,r,b,filter)
-    local row,cell
+    local cell,idx
     for cy=t,b do
-      if op=="add" and not rows[cy] then
-        rows[cy]=frompool()
-      end
-      row=rows[cy]
-      if row then
-        for cx=l,r do
-          if op=="add" and not row[cx] then
-            row[cx]=frompool()
-          end
-          cell=row[cx]
-          if cell then
-            if op=="add" then
-              cell[p1]=true
-            elseif op=="del" then
-              cell[p1]=nil
-            elseif op=="free" and not next(cell) then
-              row[cx],pool[cell]=nil,true
-            elseif op=="query" then
-              for obj in pairs(cell) do
-                if not p1[obj] and (not filter or filter(obj)) then
-                  p1[obj]=true
-                end
+      for cx=l,r do
+        idx=cx|(cy>>>16)
+        if op=="add" and not cells[idx] then
+          cells[idx]=frompool()
+        end
+        cell=cells[idx]
+        if cell then
+          if op=="add" then
+            cell[p1]=true
+          elseif op=="del" then
+            cell[p1]=nil
+          elseif op=="free" and not next(cell) then
+            cells[idx],pool[cell]=nil,true
+          elseif op=="query" then
+            for obj in pairs(cell) do
+              if not p1[obj] and (not filter or filter(obj)) then
+                p1[obj]=true
               end
             end
           end
-        end
-        if op=="free" and not next(row) then
-          rows[cy],pool[row]=nil,true
         end
       end
     end
   end
 
   return {
-    _px=px,_py=py,_p2c=p2c,_pool=pool,_rows=rows,_size=size,
+    _px=px,_py=py,_p2c=p2c,_pool=pool,_cells=cells,_size=size,
 
     add=function(obj,x,y)
       px[obj],py[obj]=x,y
