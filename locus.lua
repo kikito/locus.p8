@@ -1,15 +1,6 @@
 _ENV.locus = function(size)
   size=size or 32
-  local cells,cx,cy,pool={},{},{},{}
-
-  local function frompool()
-    local tbl=next(pool)
-    if tbl then
-      pool[tbl]=nil
-      return tbl
-    end
-    return {}
-  end
+  local cells,cx,cy={},{},{}
 
   local function p2c(x,y)
     return (x\size)+1, (y\size)+1
@@ -18,7 +9,7 @@ _ENV.locus = function(size)
   local function addcell(cx,cy,obj)
     local idx=cx|(cy>>>16)
     if not cells[idx] then
-      cells[idx]=frompool()
+      cells[idx]={}
     end
     cells[idx][obj]=true
   end
@@ -29,7 +20,7 @@ _ENV.locus = function(size)
     if cell then
       cell[obj]=nil
       if not next(cell) then
-        cells[idx],pool[cell]=nil,true
+        cells[idx]=nil
       end
     end
   end
@@ -53,7 +44,7 @@ _ENV.locus = function(size)
   end
 
   return {
-    _cx=cx,_cy=cy,_p2c=p2c,_pool=pool,_cells=cells,_size=size,
+    _cx=cx,_cy=cy,_p2c=p2c,_cells=cells,_size=size,
 
     add=function(obj,x,y)
       local cellx,celly=p2c(x,y)
