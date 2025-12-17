@@ -24,7 +24,7 @@ function _init()
       r=rnd(),
       col=rand(6,15)
     }
-    loc.add(obj,obj.x,obj.y,obj.w,obj.h)
+    loc.add(obj,obj.x,obj.y)
    end
 end
 
@@ -38,7 +38,7 @@ function _update()
   for obj in pairs(loc.query(-128,-128,256,256)) do
     obj.x+= sin(obj.av*t)*obj.r
     obj.y+= cos(obj.av*t)*obj.r
-    loc.update(obj,obj.x,obj.y,obj.w,obj.h)
+    loc.update(obj,obj.x,obj.y)
   end
 
   -- update the viewport
@@ -55,8 +55,10 @@ end
 
 
 function draw_locus(loc)
-  local cl,ct,cr,cb=loc._box2grid(0,0,128,128)
   local size=loc._size
+  -- calculate grid bounds manually
+  local cl,ct=1,1
+  local cr,cb=(128\size)+1,(128\size)+1
   local row,cell
   -- draw the cells
   for cy=ct,cb do
@@ -75,10 +77,10 @@ function draw_locus(loc)
     end
   end
 
-  -- draw the boxes containing each object
+  -- draw the positions of each object
   local objcount=0
-  for _,box in pairs(loc._boxes) do
-    rrect(box[1],box[2],box[3],box[4])
+  for obj in pairs(loc._px) do
+    circfill(loc._px[obj],loc._py[obj],1)
     objcount+=1
   end
   -- print how many objects are in locus
