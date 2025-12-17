@@ -74,10 +74,9 @@ function draw_locus(loc)
     end
   end
 
-  -- draw the positions of each object
+  -- count objects in locus
   local objcount=0
-  for obj in pairs(loc._px) do
-    circfill(loc._px[obj],loc._py[obj],1)
+  for _ in pairs(loc._cx) do
     objcount+=1
   end
   -- print how many objects are in locus
