@@ -1,6 +1,6 @@
 _ENV.locus = function(size)
   size=size or 32
-  local rows,boxes,pool={},{},{}
+  local rows,px,py,pool={},{},{},{}
 
   local function frompool()
     local tbl=next(pool)
@@ -11,11 +11,8 @@ _ENV.locus = function(size)
     return {}
   end
 
-  local function box2grid(x,y,w,h)
-    return (x\size)+1, --l
-      (y\size)+1,      --t
-      ((x+w)\size)+1,  --r
-      ((y+h)\size)+1   --b
+  local function p2c(x,y)
+    return (x\size)+1, (y\size)+1
   end
 
   local function each(op,p1,l,t,r,b,filter)
@@ -55,42 +52,41 @@ _ENV.locus = function(size)
   end
 
   return {
-    _boxes=boxes,_box2grid=box2grid,_pool=pool,_rows=rows,_size=size,
+    _px=px,_py=py,_p2c=p2c,_pool=pool,_rows=rows,_size=size,
 
-    add=function(obj,x,y,w,h)
-      local box=frompool()
-      box[1],box[2],box[3],box[4]=x,y,w,h
-      boxes[obj]=box
-      each("add",obj,box2grid(x,y,w,h))
+    add=function(obj,x,y)
+      px[obj],py[obj]=x,y
+      local cx,cy=p2c(x,y)
+      each("add",obj,cx,cy,cx,cy)
       return obj
     end,
 
     del=function(obj)
-      local box=assert(boxes[obj],"unknown object")
-      local l,t,r,b=box2grid(unpack(box))
-      each("del",obj,l,t,r,b)
-      each("free",obj,l,t,r,b)
-      box[1],box[2],box[3],box[4]=nil,nil,nil,nil
-      boxes[obj],pool[box]=nil,true
+      local x,y=assert(px[obj],"unknown object"),py[obj]
+      local cx,cy=p2c(x,y)
+      each("del",obj,cx,cy,cx,cy)
+      each("free",obj,cx,cy,cx,cy)
+      px[obj],py[obj]=nil,nil
       return obj
     end,
 
-    update=function(obj,x,y,w,h)
-      local box=assert(boxes[obj],"unknown object")
-      local l0,t0,r0,b0=box2grid(unpack(box))
-      local l1,t1,r1,b1=box2grid(x,y,w,h)
-      if l0~=l1 or t0~=t1 or r0~=r1 or b0~=b1 then
-        each("del",obj,l0,t0,r0,b0)
-        each("add",obj,l1,t1,r1,b1)
-        each("free",obj,l0,t0,r0,b0)
+    update=function(obj,x,y)
+      local x0,y0=assert(px[obj],"unknown object"),py[obj]
+      local cx0,cy0=p2c(x0,y0)
+      local cx1,cy1=p2c(x,y)
+      if cx0~=cx1 or cy0~=cy1 then
+        each("del",obj,cx0,cy0,cx0,cy0)
+        each("add",obj,cx1,cy1,cx1,cy1)
+        each("free",obj,cx0,cy0,cx0,cy0)
       end
-      box[1],box[2],box[3],box[4]=x,y,w,h
+      px[obj],py[obj]=x,y
     end,
 
     query=function(x,y,w,h,filter)
       local res=frompool()
-      local l,t,r,b=box2grid(x,y,w,h)
-      each("query",res,l,t,r,b,filter)
+      local l,t=p2c(x,y)
+      local r,b=p2c(x+w,y+h)
+      each("query",res,l-1,t-1,r+1,b+1,filter)
       return res
     end,
   }
