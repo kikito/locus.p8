@@ -11,7 +11,7 @@ _ENV.locus = function(size)
     if not cells[idx] then
       cells[idx]={}
     end
-    cells[idx][obj]=true
+    add(cells[idx],obj)
     ocx[obj],ocy[obj]=cx,cy
   end
 
@@ -20,8 +20,8 @@ _ENV.locus = function(size)
     local idx=cx|(cy>>>16)
     local cell=cells[idx]
     if cell then
-      cell[obj]=nil
-      if not next(cell) then
+      del(cell,obj)
+      if #cell==0 then
         cells[idx]=nil
       end
     end
@@ -33,8 +33,8 @@ _ENV.locus = function(size)
       for cx=l,r do
         local cell=cells[cx|(cy>>>16)]
         if cell then
-          for obj in pairs(cell) do
-            yield(obj)
+          for i=#cell,1,-1 do
+            yield(cell[i])
           end
         end
       end
