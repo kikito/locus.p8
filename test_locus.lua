@@ -1,5 +1,6 @@
 local loc
 local vp
+local objs
 
 function rand(low,hi)
   return flr(low+rnd(hi-low))
@@ -13,7 +14,8 @@ function _init()
   loc=locus()
 
   -- add 10 objects to locus
-  for _=1,10 do
+  objs={}
+  for i=1,10 do
     local w=rand(5,15)
     local obj={
       x=rand(30,110),
@@ -24,6 +26,7 @@ function _init()
       r=rnd(),
       col=rand(6,15)
     }
+    objs[i]=obj
     loc.add(obj,obj.x,obj.y)
    end
 end
@@ -76,26 +79,32 @@ function draw_locus(loc)
 
   -- count objects in locus
   local objcount=0
-  for _ in pairs(loc._cx) do
+  for _ in pairs(loc._ocx) do
     objcount+=1
   end
   -- print how many objects are in locus
   circ(7,120,5)
-  print(objcount, 5,118)
+  print(objcount,5,118)
 end
 
 function _draw()
   cls()
-  
+
   color(13)
   -- draw locus in magenta
   draw_locus(loc)
+
+  -- draw all objects as outlines
+  color(6)
+  for obj in all(objs) do
+    rrect(obj.x,obj.y,obj.w,obj.h)
+  end
 
   -- draw the viewport
   color(10)
   rrect(vp.x,vp.y,vp.w,vp.h)
 
-  -- draw he objects that are visible through the viewport with rectfill+color
+  -- draw the objects that are visible through the viewport with rectfill+color
   clip(vp.x,vp.y,vp.w,vp.h)
   for obj in loc.query(vp.x,vp.y,vp.w,vp.h) do
    rrectfill(obj.x,obj.y,obj.w,obj.h,0,obj.col)
