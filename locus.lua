@@ -1,20 +1,22 @@
 _ENV.locus = function(size)
   size=size or 32
-  local cells,cx,cy={},{},{}
+  local cells,ocx,ocy={},{},{}
 
   local function p2c(x,y)
     return (x\size)+1, (y\size)+1
   end
 
-  local function addcell(cx,cy,obj)
+  local function addcell(obj,cx,cy)
     local idx=cx|(cy>>>16)
     if not cells[idx] then
       cells[idx]={}
     end
     cells[idx][obj]=true
+    ocx[obj],ocy[obj]=cx,cy
   end
 
-  local function delcell(cx,cy,obj)
+  local function delcell(obj,cx,cy)
+    assert(cx,"unknown object")
     local idx=cx|(cy>>>16)
     local cell=cells[idx]
     if cell then
@@ -23,6 +25,7 @@ _ENV.locus = function(size)
         cells[idx]=nil
       end
     end
+    ocx[obj],ocy[obj]=nil,nil
   end
 
   local function query_iter(l,t,r,b)
@@ -44,30 +47,26 @@ _ENV.locus = function(size)
   end
 
   return {
-    _cx=cx,_cy=cy,_p2c=p2c,_cells=cells,_size=size,
+    _ocx=ocx,_cells=cells,_size=size,
 
     add=function(obj,x,y)
-      local cellx,celly=p2c(x,y)
-      cx[obj],cy[obj]=cellx,celly
-      addcell(cellx,celly,obj)
+      addcell(obj,p2c(x or obj.x,y or obj.y))
       return obj
     end,
 
     del=function(obj)
-      local cellx,celly=assert(cx[obj],"unknown object"),cy[obj]
-      delcell(cellx,celly,obj)
-      cx[obj],cy[obj]=nil,nil
+      delcell(obj,ocx[obj],ocy[obj])
       return obj
     end,
 
     update=function(obj,x,y)
-      local cx0,cy0=assert(cx[obj],"unknown object"),cy[obj]
-      local cx1,cy1=p2c(x,y)
+      local cx0,cy0=ocx[obj],ocy[obj]
+      local cx1,cy1=p2c(x or obj.x,y or obj.y)
       if cx0~=cx1 or cy0~=cy1 then
-        delcell(cx0,cy0,obj)
-        addcell(cx1,cy1,obj)
-        cx[obj],cy[obj]=cx1,cy1
+        delcell(obj,cx0,cy0)
+        addcell(obj,cx1,cy1)
       end
+      return obj
     end,
 
     query=function(x,y,w,h)
