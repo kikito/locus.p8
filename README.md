@@ -18,7 +18,7 @@ This is useful in several scenarios:
 * Given that the query area is rectangular, locus can be used to optimize the draw stage, by "only rendering objects that intersect with the screen"
 
 
-[![locus demo](https://www.lexaloffle.com/bbs/cposts/te/test_locus-1.p8.png)](https://www.lexaloffle.com/bbs/cart_info.php?cid=test_locus-1)
+[![locus demo](https://www.lexaloffle.com/bbs/cposts/te/test_locus-2.p8.png)](https://www.lexaloffle.com/bbs/cart_info.php?cid=test_locus-2)
 
 
 # API
