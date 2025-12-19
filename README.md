@@ -161,9 +161,9 @@ See `test_locus.p8` and test_locus.lua for a more complete example about how to 
 
 # Cost
 
-Locus costs approximately 320 tokens.
+Locus costs approximately 360 tokens.
 
-Performance-wise, it uses integer divisions and bit-shifting operations. Query operations use coroutines to provide an iterator interface with minimal memory allocation.
+Performance-wise, it uses integer divisions and bit-shifting operations. Query operations use a stateful iterator with minimal memory allocation. Cell tables are pooled and recycled to reduce garbage collection overhead.
 
 # Preemptive FAQ
 
@@ -173,7 +173,7 @@ Internally, locus uses a sparse table of cells indexed using bit-shifting operat
 
 Locus stores the cell coordinates for each object (not world coordinates), which eliminates redundant conversions during updates and deletions.
 
-Query operations use coroutines to provide an iterator interface with minimal memory allocation.
+Query operations use a stateful iterator (a closure that maintains iteration state) to iterate through cells with minimal overhead. Empty cell tables are pooled and reused to minimize garbage collection.
 
 ## When should I *not* use locus?
 
@@ -302,6 +302,20 @@ I am building one, this is but one of the pieces.
 
 # Changelog
 
+## Version 1.1
+
+Performance improvements:
+
+**Changes:**
+- Restored table pool system for cell recycling to reduce garbage collection
+- Replaced coroutine-based query iterator with stateful iterator for better performance
+
+**Technical Details:**
+- Query now uses a simple closure with state variables instead of coroutines
+- Pool recycling reduces allocation overhead for frequently created/destroyed cells
+- No API changes - fully backward compatible with 1.0
+- Unfortunately these changes came with an additional cost in tokens: from 320 to 360
+
 ## Version 1.0
 
 Major rewrite with breaking API changes:
@@ -315,9 +329,8 @@ Major rewrite with breaking API changes:
 
 **Improvements:**
 - Reduced token count from ~500 to ~320
-- Eliminated table pool system (simpler code)
 - Uses bit-shifting for efficient cell indexing
-- Iterator-based queries with coroutines (zero table allocations)
+- Iterator-based queries with minimal allocations
 - Stores cell coordinates directly (fewer conversions)
 - Each object occupies exactly one cell
 - Cells use arrays instead of hash tables, allowing safe deletion during query iteration
