@@ -1,6 +1,6 @@
 _ENV.locus = function(size)
   size=size or 32
-  local cells,ocx,ocy={},{},{}
+  local cells,ocx,ocy,pool={},{},{},{}
 
   local function p2c(x,y)
     return (x\size)+1, (y\size)+1
@@ -8,46 +8,30 @@ _ENV.locus = function(size)
 
   local function addcell(obj,cx,cy)
     local idx=cx|(cy>>>16)
-    if not cells[idx] then
-      cells[idx]={}
+    local c=cells[idx]
+    if not c then
+      c=next(pool) or {}
+      cells[idx],pool[c]=c,nil
     end
-    add(cells[idx],obj)
+    add(c,obj)
     ocx[obj],ocy[obj]=cx,cy
   end
 
   local function delcell(obj,cx,cy)
     assert(cx,"unknown object")
     local idx=cx|(cy>>>16)
-    local cell=cells[idx]
-    if cell then
-      del(cell,obj)
-      if #cell==0 then
-        cells[idx]=nil
+    local c=cells[idx]
+    if c then
+      del(c,obj)
+      if #c==0 then
+        cells[idx],pool[c]=nil,true
       end
     end
     ocx[obj],ocy[obj]=nil,nil
   end
 
-  local function query_iter(l,t,r,b)
-    for cy=t,b do
-      for cx=l,r do
-        local cell=cells[cx|(cy>>>16)]
-        if cell then
-          for i=#cell,1,-1 do
-            yield(cell[i])
-          end
-        end
-      end
-    end
-  end
-
-  local function query_next(co)
-    local _,obj=coresume(co)
-    return obj
-  end
-
   return {
-    _ocx=ocx,_cells=cells,_size=size,
+    _ocx=ocx,_cells=cells,_pool=pool,_size=size,
 
     add=function(obj,x,y)
       addcell(obj,p2c(x or obj.x,y or obj.y))
@@ -72,8 +56,26 @@ _ENV.locus = function(size)
     query=function(x,y,w,h)
       local l,t=p2c(x,y)
       local r,b=p2c(x+w,y+h)
-      local co=cocreate(function() query_iter(l-1,t-1,r+1,b+1) end)
-      return query_next,co
+      l,t,r,b=l-1,t-1,r+1,b+1
+      local cx,cy,i,c=l-1,t,0,nil
+
+      return function()
+        while true do
+          if i>0 then
+            local obj=c[i]
+            i-=1
+            return obj
+          end
+
+          cx+=1
+          if cx>r then
+            cx,cy=l,cy+1
+            if cy>b then return nil end
+          end
+          c=cells[cx|(cy>>>16)]
+          i=c and #c or 0
+        end
+      end
     end,
   }
 end
