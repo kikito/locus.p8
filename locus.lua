@@ -1,6 +1,6 @@
 _ENV.locus = function(size)
   size=size or 32
-  local cells,ocx,ocy,pool={},{},{},{}
+  local cells,ocx,ocy,oidx,pool={},{},{},{},{}
 
   local function p2c(x,y)
     return (x\size)+1, (y\size)+1
@@ -13,6 +13,7 @@ _ENV.locus = function(size)
       c=next(pool) or {}
       cells[idx],pool[c]=c,nil
     end
+    oidx[obj]=#c+1
     add(c,obj)
     ocx[obj],ocy[obj]=cx,cy
   end
@@ -22,8 +23,10 @@ _ENV.locus = function(size)
     local idx=cx|(cy>>>16)
     local c=cells[idx]
     if c then
-      del(c,obj)
-      if #c==0 then
+      local i,n=oidx[obj],#c
+      oidx[c[n]],c[i]=i,c[n]
+      c[n]=nil
+      if n==1 then
         cells[idx],pool[c]=nil,true
       end
     end
