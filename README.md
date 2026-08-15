@@ -302,6 +302,18 @@ I am building one, this is but one of the pieces.
 
 # Changelog
 
+## Version 1.2
+
+Performance improvement:
+
+**Changes:**
+- Made cell removal O(1) with swap-remove instead of a linear scan
+
+**Technical Details:**
+- Deletion swaps the last element into the freed slot and tracks each object's index, avoiding the linear `del` scan
+- No API changes - fully backward compatible with 1.1
+- Additional token cost: from 360 to 392
+
 ## Version 1.1
 
 Performance improvements:
