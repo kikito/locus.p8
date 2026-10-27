@@ -72,6 +72,20 @@ Throws:
 Locus keeps (strong) references to the objects added to it. If you want to remove an object, you *must* call `del`.
 
 
+## Checking if an object is in locus:
+
+``` lua
+if loc.has(obj) then
+  -- obj is in locus
+end
+```
+Parameters:
+- `obj`: the object to check
+
+Return values:
+- truthy if `obj` was added to locus, `nil` otherwise
+
+
 ## Updating an object inside locus:
 
 ``` lua
@@ -92,22 +106,21 @@ Note: If `x` and `y` are not provided, the function will use `obj.x` and `obj.y`
 ## Querying an area for objects:
 
 ``` lua
-for obj in loc.query(x,y,w,h) do
+loc.each(x,y,w,h,function(obj)
   -- use obj
-end
+end)
 ```
 Parameters:
 - `x,y`: The `left` and `top` coordinates of the axis-aligned rectangle being queried
 - `w,h`: The `width` and `height` of the axis-aligned rectangle being queried
-
-Return values:
-- An iterator that yields objects in the queried area
+- `fn`: A callback invoked as `fn(obj, ...)` for every object in the queried area; extra arguments passed after `fn` are forwarded to it
 
 Notes:
-- The iterator returns objects in no particular order.
+- Objects are visited in no particular order.
 - The query automatically includes a 1-cell border in all directions to account for objects in neighboring cells.
-- The objects returned are *the objects contained in cells that touch the specified rectangle* (plus border). They are *not guaranteed to actually be intersecting with the given rectangle*. You might need an extra check in order to have this guarantee (see example with `rectintersect` in the FAQ section).
-- If you need to filter objects, use an `if` statement inside the loop.
+- The objects visited are *the objects contained in cells that touch the specified rectangle* (plus border). They are *not guaranteed to actually be intersecting with the given rectangle*. You might need an extra check in order to have this guarantee (see example with `rectintersect` in the FAQ section).
+- If you need to filter objects, use an `if` statement inside the callback.
+- It is safe to `loc.del(obj)` from inside the callback (e.g. to remove an object on collision). `loc.add(obj)` is safe too: the new object is visited in the same pass if its cell is the current one or a later one, and skipped (until the next query) if its cell was already visited or lies outside the query area. `loc.update` (moving an object) from inside the callback is allowed but the moved object may or may not be visited again in the same pass.
 
 
 # Usage
@@ -143,16 +156,16 @@ loc.update(player)
 loc.del(coin)
 
 -- query and draw all the visible objects
-for obj in loc.query(0,0,128,128) do
+loc.each(0,0,128,128,function(obj)
   -- call your draw functions like drawplayer(obj)
-end
+end)
 
 -- query only the visible enemies with filtering
-for obj in loc.query(0,0,128,128) do
+loc.each(0,0,128,128,function(obj)
   if obj==enemy then
     -- handle enemy
   end
-end
+end)
 
 ```
 
@@ -161,9 +174,9 @@ See `test_locus.p8` and test_locus.lua for a more complete example about how to 
 
 # Cost
 
-Locus costs approximately 360 tokens.
+Locus costs approximately 245 tokens.
 
-Performance-wise, it uses integer divisions and bit-shifting operations. Query operations use a stateful iterator with minimal memory allocation. Cell tables are pooled and recycled to reduce garbage collection overhead.
+Performance-wise, it uses integer divisions and bit-shifting operations. `each` walks cells with PICO-8's builtin `add`/`del`/`all`, relying on `del` being iteration-safe so objects can be removed from inside the callback without a deferred-kill set.
 
 # Preemptive FAQ
 
@@ -171,9 +184,9 @@ Performance-wise, it uses integer divisions and bit-shifting operations. Query o
 
 Internally, locus uses a sparse table of cells indexed using bit-shifting operations. Each cell coordinate `(cx, cy)` is encoded as a single number using `cx|(cy>>>16)`, where cx is in the integer part and cy is in the fractional part of PICO-8's 16.16 fixed-point numbers.
 
-Locus stores the cell coordinates for each object (not world coordinates), which eliminates redundant conversions during updates and deletions.
+Locus stores each object's cell key (a single number), which makes removal O(1) without re-deriving the cell from coordinates.
 
-Query operations use a stateful iterator (a closure that maintains iteration state) to iterate through cells with minimal overhead. Empty cell tables are pooled and reused to minimize garbage collection.
+Query operations iterate the touched cells with a nested loop over PICO-8's builtin `all()` iterator. Cells are plain arrays created on demand and left to the garbage collector when they empty out.
 
 ## When should I *not* use locus?
 
@@ -185,7 +198,7 @@ There's several reasons not to use locus:
 
 ## Can I use locus to accelerate collision detection?
 
-Yes. You can use the `query` iterator to get a "fast rough list of candidate objects for collision", and then apply a "more expensive collision detection algorithm" (like [hit.p8](https://github.com/kikito/hit.p8/tree/main)) to use a more costly collision detection algorithm only to the list of candidates.
+Yes. You can use `each` to visit a "fast rough list of candidate objects for collision", and then apply a "more expensive collision detection algorithm" (like [hit.p8](https://github.com/kikito/hit.p8/tree/main)) to use a more costly collision detection algorithm only to the list of candidates.
 
 ## Could you show me how to use it in combination with hit.p8?
 
@@ -212,7 +225,7 @@ function updatebullet(b)
   -- check the querybox for enemies
   local first_e=nil
   local first_t=32767 --max integer
-  for e in loc.query(l,t,w,h) do
+  loc.each(l,t,w,h,function(e)
     if is_enemy(e) then
       local t=hit(b.x,b.y,b.w,b.h,
                   e.x,e.y,e.w,e.h,
@@ -223,7 +236,7 @@ function updatebullet(b)
         first_e=e
       end
     end
-  end
+  end)
 
   if first_e then
     -- collision with an enemy detected
@@ -259,22 +272,22 @@ function updateplayer(p)
   p.x,p.y=nx,ny
   loc.update(p,p.x,p.y)
 
-  for c in loc.query(p.x,p.y,p.w,p.h) do
+  loc.each(p.x,p.y,p.w,p.h,function(c)
     if is_coin(c) and rectintersect(p.x,p.y,p.w,p.h,
                                      c.x,c.y,c.w,c.h) then
       score+=1
-      loc.del(c) -- delete coin. We might need to remove it from other places too
+      loc.del(c) -- delete coin. safe to del from inside the callback
     end
-  end
+  end)
 end
 ```
 
-In this case, we immediately move the player to a new position and then use query on the new player's coordinates to detect coins that might be touching the player.
+In this case, we immediately move the player to a new position and then use `each` on the new player's coordinates to detect coins that might be touching the player.
 
 Notes:
 * With this method, if the player is moving fast enough, they will "tunnel" through coins and other objects. With this method the velocity of the player must be limited, or we must split the movement into smaller steps and do a check on every step. The method above (using hit.p8) does not have this problem
-* Notice that eventhough we gave the player's bounding rectangle to `query`, we still need to call `rectintersect` to properly detect that a coin is actually intersecting with the player. This is because `query` will return the *objects that are on the cells that intersect with the given rectangle* (plus a 1-cell border), *but will not guarantee that the objects intersect the rectangle*.
-* `query` will return the objects in random order. There's no way to detect which coins get "touched" first. It is not important on this example, but it might be important in more complex games (e.g. if there's an enemy before the coins, then the player might get hurt and not pick up the coins). With hit.p8 you can know which objects go first (smaller `t`).
+* Notice that eventhough we gave the player's bounding rectangle to `each`, we still need to call `rectintersect` to properly detect that a coin is actually intersecting with the player. This is because `each` will visit the *objects that are on the cells that intersect with the given rectangle* (plus a 1-cell border), *but will not guarantee that the objects intersect the rectangle*.
+* `each` will visit the objects in random order. There's no way to detect which coins get "touched" first. It is not important on this example, but it might be important in more complex games (e.g. if there's an enemy before the coins, then the player might get hurt and not pick up the coins). With hit.p8 you can know which objects go first (smaller `t`).
 
 ## Can I use locus in picotron?
 
@@ -301,6 +314,33 @@ I am the original author of the [bump.lua](https://github.com/kikito/bump.lua) l
 I am building one, this is but one of the pieces.
 
 # Changelog
+
+## Version 2.0
+
+Breaking change + simplification:
+
+**Breaking changes:**
+- `query(x,y,w,h)`, which returned an iterator (a per-call closure), has been replaced by
+  `each(x,y,w,h,fn,...)`, which calls `fn(obj, ...)` per object. The old method allocated
+  a fresh closure per call; `each` doesn't, and its callback can be localized in some cases.
+  It is still safe to `add` and `del` entities while iterating.
+- Library no longer exports internal details like `_cells` or `_size`
+
+**New method:**
+- Added `has(obj)` — returns truthy if `obj` is in the grid.
+
+**Reworked the internals:**
+- Replaced the per-cell reverse index and object pool with a single
+  `index[obj]=cellkey` table plus plain-array cells managed by PICO-8's builtin
+  `add`/`del`/`all`. `del(t,value)` is iteration-safe on PICO-8, so cells need no
+  deferred-kill bookkeeping.
+
+**Migration Guide:**
+- Change `for obj in loc.query(x,y,w,h) do ... end` to
+  `loc.each(x,y,w,h,function(obj) ... end)`. Mutating outer locals from the
+  callback works via upvalues; there is no `break` — return early inside `fn` or
+  track a flag if needed.
+- Token count: from 392 to 245.
 
 ## Version 1.2
 

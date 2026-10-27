@@ -1,84 +1,60 @@
+-- vendored locus spatial hash. plain-array cells via builtin add/del/all
+-- (del(t,value) is iteration-safe on pico-8, so no deferred-kill needed).
 _ENV.locus = function(size)
-  size=size or 32
-  local cells,ocx,ocy,oidx,pool={},{},{},{},{}
+ size=size or 32
+ local bkts,index={},{}
 
-  local function p2c(x,y)
-    return (x\size)+1, (y\size)+1
-  end
+ local function p2c(x,y)
+  return x\size+1, y\size+1
+ end
 
-  local function addcell(obj,cx,cy)
-    local idx=cx|(cy>>>16)
-    local c=cells[idx]
-    if not c then
-      c=next(pool) or {}
-      cells[idx],pool[c]=c,nil
+ local function getk(obj,x,y)
+  local cx,cy=p2c(x or obj.x,y or obj.y)
+  return cx|(cy>>>16)
+ end
+
+ local function add2bkt(obj,k)
+  bkts[k]=bkts[k] or {}
+  add(bkts[k],obj)
+  index[obj]=k
+ end
+
+ local function delfrombkt(obj,k)
+  assert(k,"unknown object")
+  del(bkts[k],obj)
+  index[obj]=nil
+ end
+
+ return {
+  has=function(obj) return index[obj]~=nil end,
+
+  add=function(obj,x,y)
+   add2bkt(obj,getk(obj,x,y))
+   return obj
+  end,
+
+  del=function(obj)
+   delfrombkt(obj,index[obj])
+   return obj
+  end,
+
+  update=function(obj,x,y)
+   local k,nk=index[obj],getk(obj,x,y)
+   if k~=nk then
+    delfrombkt(obj,k)
+    add2bkt(obj,nk)
+   end
+   return obj
+  end,
+
+  each=function(x,y,w,h,fn,...)
+   local l,t=p2c(x,y)
+   local r,b=p2c(x+w,y+h)
+   for cy=t-1,b+1 do
+    for cx=l-1,r+1 do
+     for obj in all(bkts[cx|(cy>>>16)]) do fn(obj,...) end
     end
-    oidx[obj]=#c+1
-    add(c,obj)
-    ocx[obj],ocy[obj]=cx,cy
+   end
   end
-
-  local function delcell(obj,cx,cy)
-    assert(cx,"unknown object")
-    local idx=cx|(cy>>>16)
-    local c=cells[idx]
-    if c then
-      local i,n=oidx[obj],#c
-      oidx[c[n]],c[i]=i,c[n]
-      c[n]=nil
-      if n==1 then
-        cells[idx],pool[c]=nil,true
-      end
-    end
-    ocx[obj],ocy[obj]=nil,nil
-  end
-
-  return {
-    _ocx=ocx,_cells=cells,_pool=pool,_size=size,
-
-    add=function(obj,x,y)
-      addcell(obj,p2c(x or obj.x,y or obj.y))
-      return obj
-    end,
-
-    del=function(obj)
-      delcell(obj,ocx[obj],ocy[obj])
-      return obj
-    end,
-
-    update=function(obj,x,y)
-      local cx0,cy0=ocx[obj],ocy[obj]
-      local cx1,cy1=p2c(x or obj.x,y or obj.y)
-      if cx0~=cx1 or cy0~=cy1 then
-        delcell(obj,cx0,cy0)
-        addcell(obj,cx1,cy1)
-      end
-      return obj
-    end,
-
-    query=function(x,y,w,h)
-      local l,t=p2c(x,y)
-      local r,b=p2c(x+w,y+h)
-      l,t,r,b=l-1,t-1,r+1,b+1
-      local cx,cy,i,c=l-1,t,0,nil
-
-      return function()
-        while true do
-          if i>0 then
-            local obj=c[i]
-            i-=1
-            return obj
-          end
-
-          cx+=1
-          if cx>r then
-            cx,cy=l,cy+1
-            if cy>b then return nil end
-          end
-          c=cells[cx|(cy>>>16)]
-          i=c and #c or 0
-        end
-      end
-    end,
-  }
+ }
 end
